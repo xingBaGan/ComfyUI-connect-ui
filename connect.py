@@ -1,6 +1,3 @@
-
-
-
 from PIL import Image
 import numpy as np
 import comfy.utils
@@ -71,50 +68,31 @@ class SaveImageByWebsocket:
     CATEGORY = "api/image"
 
     def save_images(self, images):
-        # PromptServer.instance.send_sync("send_websocket_image", json.dumps({"type": "image", "data": '123' }))
+        global socket
         for image in images:
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-            PromptServer.instance.send_sync("send_websocket_image", json.dumps({"type": "image", "data": base64.b64encode(img.tobytes()).decode('utf-8')}))
+            # 将图片保存为 PNG 格式的字节流
+            buffer = BytesIO()
+            img.save(buffer, format="PNG")
+            img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            
+            message = {
+                "type": "image",
+                "data": f"data:image/png;base64,{img_str}",
+            }
+            json_message = json.dumps(message)
+            PromptServer.instance.send_sync("send_image_from_websocket", json_message)
         return {}
 
     @classmethod
     def IS_CHANGED(s, images):
         return time.time()
 
-
-# 添加新的API路由处理器
-# @PromptServer.instance.routes.post("/api/send-image-by-post")
-# async def send_image_to_client(request):
-#     global message_data
-#     try:
-#         data = await request.post()
-#         image_field = data.get("image")
-#         client_id = data.get("client_id")
-
-#         if not image_field or not client_id:
-#             return web.Response(status=400, text="缺少必要参数")
-
-#         image_bytes = image_field.file.read()
-        
-#         # 构建websocket消息
-#         message = {
-#             "type": "image",
-#             "data": base64.b64encode(image_bytes).decode('utf-8'),
-#             "client_id": f"task_{client_id}"  # 确保ID格式匹配
-#         }
-#         json_message = json.dumps(message)
-#         message_data = json_message
-#         PromptServer.instance.send_sync("recive_websocket_image", json_message)
-#         return web.Response(status=200, text="图片已发送")
-        
-#     except Exception as e:
-#         print(f"错误: {str(e)}")
-#         return web.Response(status=500, text=str(e))
-
 # 创建一个websocket服务器
 @PromptServer.instance.routes.get('/ws_live')
 async def websocket_handler(request):
+    global socket
     global placeholder_image_path
     ws = web.WebSocketResponse()
     await ws.prepare(request)
