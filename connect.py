@@ -1,13 +1,11 @@
 from PIL import Image
 import numpy as np
-import comfy.utils
 import time
 import json
 import base64
 from io import BytesIO
 from aiohttp import WSMsgType
 from server import PromptServer
-import asyncio
 from aiohttp import web
 import torch
 import logging
@@ -15,11 +13,8 @@ import uuid
 import aiohttp
 import PIL
 import os
-#You can use this node to save full size images through the websocket, the
-#images will be sent in exactly the same format as the image previews: as
-#binary images on the websocket with a 8 byte header indicating the type
-#of binary message (first 4 bytes) and the image format (next 4 bytes).
 
+socket = None
 #Note that no metadata will be put in the images saved with this node.
 socket = None
 placeholder_image_path = None
