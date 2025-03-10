@@ -89,6 +89,40 @@ class SaveImageByWebsocket:
     def IS_CHANGED(s, images):
         return time.time()
 
+async def handle_websocket_message(msg,sid):
+    global placeholder_image_path
+    data = json.loads(msg.data)
+    if data["type"] == "input_image_change":
+        image_data = None
+        ext = "png"
+        if "," in data["data"]["image"]:
+            image_info = data["data"]["image"].split(",")
+            image_data = image_info[1]
+            image_type = image_info[0]
+            ext = image_type.split("/")[1].replace(";base64", "")
+        try:
+            image_bytes = base64.b64decode(image_data)
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # 获取当前文件所在目录
+            image_dir = os.path.join(current_dir, "images")  # 在当前目录下创建 images 目录
+            os.makedirs(image_dir, exist_ok=True)  # 确保目录存在
+            image_path = os.path.join(image_dir, f"placeholder.{ext}")  # 图片路径
+            with open(image_path, "wb") as image_file:
+                image_file.write(image_bytes)
+            placeholder_image_path = image_path
+        except PIL.UnidentifiedImageError:
+            print("无法识别图像文件")
+        message = {
+            "type": "image",
+            "data": data["data"]["image"],
+            "client_id": f"task_{sid}"  # 确保ID格式匹配
+        }
+        json_message = json.dumps(message)
+        PromptServer.instance.send_sync("recive_websocket_image", json_message)
+        return web.Response(status=200, text="图片已发送")
+    if data["type"] == "get_workflow":
+        PromptServer.instance.send_sync("get_workflow", json.dumps({"type": "get_workflow"}))
+        return web.Response(status=200, text="工作流已发送")
+
 # 创建一个websocket服务器
 @PromptServer.instance.routes.get('/ws_live')
 async def websocket_handler(request):
@@ -106,37 +140,9 @@ async def websocket_handler(request):
 
     socket = ws
     print(f"sid: {sid}")
-
     async for msg in ws:
         if msg.type == aiohttp.WSMsgType.TEXT:
-            data = json.loads(msg.data)
-            if data["type"] == "input_image_change":
-                image_data = None
-                ext = "png"
-                if "," in data["data"]["image"]:
-                    image_info = data["data"]["image"].split(",")
-                    image_data = image_info[1]
-                    image_type = image_info[0]
-                    ext = image_type.split("/")[1].replace(";base64", "")
-                try:
-                    image_bytes = base64.b64decode(image_data)
-                    current_dir = os.path.dirname(os.path.abspath(__file__))  # 获取当前文件所在目录
-                    image_dir = os.path.join(current_dir, "images")  # 在当前目录下创建 images 目录
-                    os.makedirs(image_dir, exist_ok=True)  # 确保目录存在
-                    image_path = os.path.join(image_dir, f"placeholder.{ext}")  # 图片路径
-                    with open(image_path, "wb") as image_file:
-                        image_file.write(image_bytes)
-                    placeholder_image_path = image_path
-                except PIL.UnidentifiedImageError:
-                    print("无法识别图像文件")
-                message = {
-                    "type": "image",
-                    "data": data["data"]["image"],
-                    "client_id": f"task_{sid}"  # 确保ID格式匹配
-                }
-                json_message = json.dumps(message)
-                PromptServer.instance.send_sync("recive_websocket_image", json_message)
-                return web.Response(status=200, text="图片已发送")
+            await handle_websocket_message(msg,sid)
         if msg.type == aiohttp.WSMsgType.ERROR:
             logging.warning('ws connection closed with exception %s' % ws.exception())
     return ws
@@ -145,3 +151,11 @@ NODE_CLASS_MAPPINGS = {
     "SaveImageByWebsocket": SaveImageByWebsocket,
     "reciveImageByWebsocket": reciveImageByWebsocket,
 }
+
+
+@PromptServer.instance.routes.get('/api/workflow/send')
+async def send_workflow(request):
+    data = await request.json()
+    print(data)
+    PromptServer.instance.send_sync("send_workflow", data)
+    return web.json_response({"message": "Workflow sent"})
