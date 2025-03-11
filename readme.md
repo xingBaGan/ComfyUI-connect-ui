@@ -1,3 +1,7 @@
+How to use it:
+
+plase use it with the https://github.com/xingBaGan/comfy-workflow-ui
+
 ## Installation:
 
 Clone this repo into custom_nodes folder.
