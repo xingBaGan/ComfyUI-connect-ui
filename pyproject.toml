@@ -1,0 +1,14 @@
+[project]
+name = "connect-ui"
+description = "Real-time image transfer between client and server Base64 image encoding/decoding support Supports PNG image format Includes a floating preview window for received images Preview window has minimize/maximize functionality"
+version = "1.0.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/xingBaGan/ComfyUI-connect-ui"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-connect-ui"
+Icon = ""
