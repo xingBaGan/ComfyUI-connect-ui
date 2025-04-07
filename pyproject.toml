@@ -9,6 +9,6 @@ Repository = "https://github.com/xingBaGan/ComfyUI-connect-ui"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "xingbagan"
 DisplayName = "ComfyUI-connect-ui"
 Icon = ""
